@@ -1,4 +1,4 @@
-# CalmFLow
+# CalmFlow
 
 ## Table of Contents
 - [Installation Guide](#installation-guide)
