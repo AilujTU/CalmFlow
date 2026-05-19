@@ -2,27 +2,50 @@
 <html>
 
 <head>
-    <title>ferrum Settings</title>
+    <title>CalmFlow Settings</title>
     <link rel="stylesheet" href="options.css">
 </head>
 
 <body>
-    <div class="schedule-group">
-        <h2>Focus Hours</h2>
-        <label>
-            Keep sites blocked on weekends:
-            <input type="checkbox" id="weekendsEnabled" />
-            <span class="toggle-switch"></span>
-        </label>
-        <label>
-            Start:
-            <input type="time" id="startTime" />
-        </label>
-        <label>
-            End:
-            <input type="time" id="endTime" />
-        </label>
-        <button id="saveScheduleBtn">Save Schedule</button>
+    <div class="row">
+        <div class="column">
+            <div class="schedule-group">
+                <h2>Flow Hours</h2>
+                <label>
+                    <b>Keep sites blocked on weekends:</b>
+                    <input type="checkbox" id="weekendsEnabled" />
+                    <span class="toggle-switch"></span>
+                </label>
+                <label>
+                    <b>Start:</b>
+                    <input type="time" id="startTime" />
+                </label>
+                <label>
+                    <b>End:</b>
+                    <input type="time" id="endTime" />
+                </label>
+                <button id="saveScheduleBtn">Save Schedule Settings</button>
+            </div>
+        </div>
+        <div class="column">
+            <div class="schedule-group">
+                <h2>Rewards</h2>
+                <label>
+                    <b>Reward done tasks with access to blocked websites:</b>
+                    <input type="checkbox" id="rewardsEnabled" />
+                    <span class="toggle-switch"></span>
+                </label>
+                <label>
+                    <b>Number of tasks to gain a pause:</b>
+                    <input type="number" id="nrOfTaskForReward" />
+                </label>
+                <label>
+                    <b>Number of minutes per pause:</b>
+                    <input type="number" id="nrOfMinsForReward" />
+                </label>
+                <button id="saveRewardsBtn">Save Rewards Settings</button>
+            </div>
+        </div>
     </div>
     <div class="row">
         <div class="column">
@@ -31,7 +54,7 @@
 
                 <div class="input-group">
                     <input id="siteInput" type="text" placeholder="e.g. reddit.com" />
-                    <button id="addBtn">Add</button>
+                    <button id="addSiteBtn">Add</button>
                 </div>
 
                 <ul id="currentSiteList"></ul>
@@ -39,9 +62,27 @@
         </div>
         <div class="column">
             <div class="container">
+                <h1>Tasks</h1>
+                <div class="input-group">
+                    <input id="taskInput" type="text" placeholder="e.g. studying for math exam" />
+                    <button id="addTaskBtn">Add</button>
+                </div>
+
+                <ul id="currentTaskList"></ul>
+            </div>
+        </div>
+        <div class="column">
+            <div class="container">
                 <h1>Previous Selection</h1>
-                <button id="clearPrevBtn">Clear previously selected</button>
+                <button id="clearPrevSiteBtn">Clear previously selected sites</button>
                 <ul id="prevSiteList"></ul>
+            </div>
+        </div>
+        <div class="column">
+            <div class="container">
+                <h1>Previous Tasks</h1>
+                <button id="clearPrevTaskBtn">Clear previously completed tasks</button>
+                <ul id="prevTaskList"></ul>
             </div>
         </div>
     </div>

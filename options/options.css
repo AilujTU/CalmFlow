@@ -35,9 +35,10 @@ h1 {
 }
 
 input {
-  flex: 1;
+  flex:auto;
   padding: 12px;
   border-radius: 12px;
+  margin-left: 5px;
   border: 1px solid #d1d5db;
   font-size: 15px;
   outline: none;
@@ -137,7 +138,7 @@ li .remove:hover, .add:hover {
   align-items: center;
 }
 
-.schedule-group input[type="time"] {
+.schedule-group input[type="time"], .schedule-group input[type="number"] {
   padding: 6px 10px;
   border-radius: 8px;
   border: 1px solid #d1d5db;
@@ -201,10 +202,4 @@ label input[type="checkbox"]:checked+.toggle-switch::after {
   content: "";
   display: table;
   clear: both;
-}
-
-@media screen and (max-width: 600px) {
-  .column {
-    width: 100%;
-  }
 }
