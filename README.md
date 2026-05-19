@@ -33,3 +33,4 @@ This installation guide will focus on the installation in Chrome, other installa
 
 ## Used Resources
 - Color palette taken from [here](https://colorhunt.co/palette/f2eae0b4d3d9bda6ce9b8ec7).
+- Icon symbol taken from [here](https://icon-sets.iconify.design/)
