@@ -198,10 +198,9 @@ function renderCurrentTasks() {
     left.style.alignItems = "center";
     left.style.gap = "10px";
 
-    const checkbox = document.createElement("checkbox");
-    checkbox.checked = false;
-    checkbox.width = 16;
-    checkbox.height = 16;
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "task-checkbox";
 
     const span = document.createElement("span");
     span.textContent = task;
@@ -209,23 +208,20 @@ function renderCurrentTasks() {
     left.appendChild(checkbox);
     left.appendChild(span);
 
-    const removeButton = document.createElement("button");
-    removeButton.textContent = "Remove";
-    removeButton.className = "remove";
+    checkbox.addEventListener("change", () => {
+      const completedTask = currentTasks[index];
 
-    removeButton.onclick = () => {
-      const removedTask = currentTasks[index];
-
-      if (removedTask && !prevTasks.includes(removedTask))
-        prevTasks.push(removedTask);
+      if (completedTask && !prevTasks.includes(completedTask)) {
+        prevTasks.push(completedTask);
+      }
 
       currentTasks.splice(index, 1);
+
       saveLists();
       renderAll();
-    };
+    });
 
     li.appendChild(left);
-    li.appendChild(removeButton);
     currentTaskList.appendChild(li);
   })
 }
@@ -241,30 +237,34 @@ function renderPreviousTasks() {
     left.style.alignItems = "center";
     left.style.gap = "10px";
 
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "task-checkbox";
+    checkbox.checked = true;
+
     const span = document.createElement("span");
     span.textContent = task;
     span.style.textDecoration = "line-through";
     span.style.opacity = "0.5";
+    span.style.color = "#6b7280";
 
+    left.appendChild(checkbox);
     left.appendChild(span);
 
-    const addButton = document.createElement("button");
-    addButton.textContent = "Add";
-    addButton.className = "add";
-
-    addButton.onclick = () => {
+    checkbox.addEventListener("change", () => {
       const restoredTask = prevTasks[index];
 
-      if (restoredTask && !currentTasks.includes(restoredTask))
+      if (restoredTask && !currentTasks.includes(restoredTask)) {
         currentTasks.push(restoredTask);
+      }
 
       prevTasks.splice(index, 1);
+
       saveLists();
       renderAll();
-    }
+    });
 
     li.appendChild(left);
-    li.appendChild(addButton);
     prevTaskList.appendChild(li);
   })
 }

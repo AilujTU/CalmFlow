@@ -203,3 +203,38 @@ label input[type="checkbox"]:checked+.toggle-switch::after {
   display: table;
   clear: both;
 }
+
+.task-checkbox {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid #9B8EC7;
+  border-radius: 5px;
+  background: #ffffff;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.task-checkbox:hover {
+  border-color: #BDA6CE;
+  background: #F2EAE0;
+}
+
+.task-checkbox:checked {
+  background: #9B8EC7;
+  border-color: #9B8EC7;
+}
+
+.task-checkbox:checked::after {
+  content: "\2717";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -54%);
+  font-size: 18px;
+  font-weight: 600;
+  color: #FFFFFF;
+  line-height: 1;
+}
