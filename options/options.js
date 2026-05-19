@@ -1,10 +1,35 @@
-const input = document.getElementById("siteInput");
-const addButton = document.getElementById("addBtn");
-const currentList = document.getElementById("currentSiteList");
-const prevList = document.getElementById("prevSiteList");
+// Get all needed HTML Elements
+// User Input
+const startInput = document.getElementById("startTime");
+const endInput = document.getElementById("endTime");
+const nrOfTaskInput = document.getElementById("nrOfTaskForReward");
+const nrOfMinsInput = document.getElementById("nrOfMinsForReward");
+const siteInput = document.getElementById("siteInput");
+const taskInput = document.getElementById("taskInput");
 
+// Buttons
+const saveScheduleButton = document.getElementById("saveScheduleBtn");
+const saveRewardsButton = document.getElementById("saveRewardsBtn");
+const addSiteButton = document.getElementById("addSiteBtn");
+const addTaskButton = document.getElementById("addTaskBtn");
+const clearPrevSiteButton = document.getElementById("clearPrevSiteBtn");
+const clearPrevTaskButton = document.getElementById("clearPrevTaskBtn");
+
+// Checkboxes
+const weekendsEnabledCheckbox = document.getElementById("weekendsEnabled");
+const rewardsEnabledCheckbox = document.getElementById("rewardsEnabled");
+
+// Lists
+const currentSiteList = document.getElementById("currentSiteList");
+const prevSiteList = document.getElementById("prevSiteList");
+const currentTaskList = document.getElementById("currentTaskList");
+const prevTaskList = document.getElementById("prevTaskList");
+
+// init empty list sets
 let currentSites = [];
 let prevSites = [];
+let currentTasks = [];
+let prevTasks = [];
 
 
 /**
@@ -35,33 +60,48 @@ function normalizeSite(value) {
 }
 
 /**
- * Loads blocked sites from storage, re-renders the blocked sites list.
+ * Loads the list of current & previous blocked sites and current & previous tasks.
  */
-function loadSites() {
-  chrome.storage.sync.get(["currentBlockedSites"], (result) => {
-    currentSites = result.currentBlockedSites || [];
-    render();
+function loadLists() {
+  chrome.storage.sync.get(["currentSites"], (result) => {
+    currentSites = result.currentSites || [];
   });
-  chrome.storage.sync.get(["prevBlockedSites"], (result) => {
-    prevSites = result.prevBlockedSites || [];
-    render();
+  chrome.storage.sync.get(["prevSites"], (result) => {
+    prevSites = result.prevSites || [];
   });
+  chrome.storage.sync.get(["currentTasks"], (result) => {
+    currentTasks = result.currentTasks || [];
+  })
+  chrome.storage.sync.get(["prevTasks"], (result) => {
+    prevTasks = result.prevTasks || [];
+  })
+  renderAll();
 }
 
 /**
- * Saves blocked & previous sites to storage.
+ * Saves blocked current & previous blocked sites and current & previous tasks to storage.
  */
-function saveSites() {
-  chrome.storage.sync.set({currentBlockedSites: currentSites });
-  chrome.storage.sync.set({prevBlockedSites: prevSites});
+function saveLists() {
+  chrome.storage.sync.set({ currentSites: currentSites });
+  chrome.storage.sync.set({ prevSites: prevSites });
+  chrome.storage.sync.set({ currentTasks: currentTasks });
+  chrome.storage.sync.set({ prevTasks: prevTasks });
 }
 
 /**
- * Renders list of blocked websites & previously selected websites, 
- * including the normalized web url, a remove button and the favicon of each web url, if possible.
+ * Renders list of current & previously blocked websites and current & previously tasks.
+ * Includes the normalized web url, a remove button and the favicon of each web url, if possible for the sites.
+ * Includes a checkbox and a remove button or a add button for each task.
  */
-function render() {
-  currentList.innerHTML = "";
+function renderAll() {
+  renderCurrentSites();
+  renderPreviousSites();
+  renderCurrentTasks();
+  renderPreviousTasks();
+}
+
+function renderCurrentSites() {
+  currentSiteList.innerHTML = "";
 
   currentSites.forEach((site, index) => {
     const li = document.createElement("li");
@@ -92,16 +132,18 @@ function render() {
       if (removedSite && !prevSites.includes(removedSite)) prevSites.push(removedSite);
 
       currentSites.splice(index, 1);
-      saveSites();
-      render();
+      saveLists();
+      renderAll();
     };
 
     li.appendChild(left);
     li.appendChild(removeButton);
-    currentList.appendChild(li);
+    currentSiteList.appendChild(li);
   });
+}
 
-  prevList.innerHTML = "";
+function renderPreviousSites() {
+  prevSiteList.innerHTML = "";
 
   prevSites.forEach((site, index) => {
     const li = document.createElement("li");
@@ -130,24 +172,105 @@ function render() {
       const restoredSite = prevSites[index];
 
       if (restoredSite && !currentSites.includes(restoredSite)) currentSites.push(restoredSite);
-      
+
       prevSites.splice(index, 1);
-      saveSites();
-      render();
+      saveLists();
+      renderAll();
     }
 
     li.appendChild(left);
     li.appendChild(addButton);
-    prevList.appendChild(li);
+    prevSiteList.appendChild(li);
+  })
+}
+
+function renderCurrentTasks() {
+  currentTaskList.innerHTML = "";
+
+  currentTasks.forEach((task, index) => {
+    const li = document.createElement("li");
+
+    const left = document.createElement("div");
+    left.style.display = "flex";
+    left.style.alignItems = "center";
+    left.style.gap = "10px";
+
+    const checkbox = document.createElement("checkbox");
+    checkbox.checked = false;
+    checkbox.width = 16;
+    checkbox.height = 16;
+
+    const span = document.createElement("span");
+    span.textContent = task;
+
+    left.appendChild(checkbox);
+    left.appendChild(span);
+
+    const removeButton = document.createElement("button");
+    removeButton.textContent = "Remove";
+    removeButton.className = "remove";
+
+    removeButton.onclick = () => {
+      const removedTask = currentTasks[index];
+
+      if (removedTask && !prevTasks.includes(removedTask))
+        prevTasks.push(removedTask);
+
+      currentTasks.splice(index, 1);
+      saveLists();
+      renderAll();
+    };
+
+    li.appendChild(left);
+    li.appendChild(removeButton);
+    currentTaskList.appendChild(li);
+  })
+}
+
+function renderPreviousTasks() {
+  prevTaskList.innerHTML = "";
+
+  prevTasks.forEach((task, index) => {
+    const li = document.createElement("li");
+
+    const left = document.createElement("div");
+    left.style.display = "flex";
+    left.style.alignItems = "center";
+    left.style.gap = "10px";
+
+    const span = document.createElement("span");
+    span.textContent = task;
+    span.style.textDecoration = "line-through";
+
+    left.appendChild(span);
+
+    const addButton = document.createElement("button");
+    addButton.textContent = "Add";
+    addButton.className = "add";
+
+    addButton.onclick = () => {
+      const restoredTask = prevTasks[index];
+
+      if (restoredTask && !currentTasks.includes(restoredTask))
+        currentTasks.push(restoredTask);
+
+      prevTasks.splice(index, 1);
+      saveLists();
+      renderAll();
+    }
+
+    li.appendChild(left);
+    li.appendChild(addButton);
+    prevTaskList.appendChild(li);
   })
 }
 
 /**
- * Event listener for the add button.
- * Adds added sites to blocked web site list and re-renders it accordingly.
+ * Event listener for the add button for sites.
+ * Adds added sites to current blocked site list and re-renders it accordingly.
  */
-addButton.addEventListener("click", () => {
-  const rawValue = input.value.trim();
+addSiteButton.addEventListener("click", () => {
+  const rawValue = siteInput.value.trim();
   const normalized = normalizeSite(rawValue);
 
   if (!normalized) {
@@ -157,40 +280,64 @@ addButton.addEventListener("click", () => {
 
   if (!currentSites.includes(normalized)) {
     currentSites.push(normalized);
-    input.value = "";
-    saveSites();
-    render();
+    siteInput.value = "";
+    saveLists();
+    renderAll();
   }
 });
 
 /**
- * Input confirmation through enter instead of add button.
+ * Input confirmation through enter instead of add button for sites.
  */
-input.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") addButton.click();
+siteInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") addSiteButton.click();
 });
-
-// Init
-loadSites();
-
-// Initalize vars with input of user
-const weekendsEnabled = document.getElementById("weekendsEnabled");
-const startInput = document.getElementById("startTime");
-const endInput = document.getElementById("endTime");
-const saveScheduleButton = document.getElementById("saveScheduleBtn");
-const clearPreviousButton = document.getElementById("clearPrevBtn");
 
 /**
- * Event listener for checkbox.
+ * Event listener for the add button for tasks.
+ * Adds added tasks to current task list and re-renders it accordingly.
+ */
+addTaskButton.addEventListener("click", () => {
+  const value = taskInput.value.trim();
+
+  if (!currentTasks.includes(value)) {
+    currentTasks.push(value);
+    taskInput.value = "";
+    saveLists();
+    renderAll();
+  }
+})
+
+/**
+ * Input confirmation through enter instead of add button for tasks.
+ */
+taskInput.addEventListener("keypress", (e) => {
+  if (e.key == "Enter") addTaskButton.click();
+})
+
+// Init
+loadLists();
+
+/**
+ * Event listener for the weekend schedule checkbox.
  * Saves whether weekends are included or excluded from schedule to storage.
  */
-weekendsEnabled.addEventListener("change", () => {
-  chrome.storage.sync.set({ weekendsEnabled: weekendsEnabled.checked });
+weekendsEnabledCheckbox.addEventListener("change", () => {
+  chrome.storage.sync.set({ weekendsEnabled: weekendsEnabledCheckbox.checked });
 });
+
+/**
+ * Event listener for the task rewards checkbox.
+ * Saves whether rewards for tasks done are enabled or not to storage.
+ */
+rewardsEnabledCheckbox.addEventListener("change", () => {
+  chrome.storage.sync.set({ rewardsEnabled: rewardsEnabledCheckbox.checked });
+})
 
 /**
  * Loads the schedule for when websites should be blocked from storage,
  * including decision of whether weekends are included.
+ * Also loads whether rewards are enabled or not, and if how many and how much time each give.
  * Defaults to start 9am and end 5pm.
  */
 function loadSchedule() {
@@ -200,18 +347,26 @@ function loadSchedule() {
     endInput.value = schedule.end;
   });
   chrome.storage.sync.get(["weekendsEnabled"], (result) => {
-    weekendsEnabled.checked = result.weekendsEnabled || false;
+    weekendsEnabledCheckbox.checked = result.weekendsEnabled || false;
+  });
+  chrome.storage.sync.get(["rewardsEnabled"], (result) => {
+    rewardsEnabledCheckbox.checked = result.rewardsEnabled || false;
+  });
+  chrome.storage.sync.get(["rewardsRules"], (result) => {
+    const rules = result.rewardsRules || {amount: 1, mins: 5};
+    nrOfTaskInput.value = rules.amount;
+    nrOfMinsInput.value = rules.mins;
   });
 }
 
 /**
  * Event listener for save schedule button.
- * Saves selected schedule to storage and gives user visual feedback to confirm success.
+ * Saves selected schedule to storage and gives user visual feedback of success.
  */
 saveScheduleButton.addEventListener("click", () => {
   const schedule = { start: startInput.value, end: endInput.value };
   chrome.storage.sync.set({ focusSchedule: schedule });
-  chrome.storage.sync.set({ weekendsEnabled: weekendsEnabled.checked });
+  chrome.storage.sync.set({ weekendsEnabled: weekendsEnabledCheckbox.checked });
 
   const tmp = saveScheduleButton.textContent;
   saveScheduleButton.textContent = "Saved successfully!";
@@ -220,17 +375,55 @@ saveScheduleButton.addEventListener("click", () => {
   }, 3000);
 });
 
-clearPreviousButton.addEventListener("click", () => {
-  const successMsg = prevSites.length == 0? "Nothing to clear!" : "Cleared successfully!";
+/**
+ * Event listener for save rewards button.
+ * Saves selected rewards rules to storage and gives user visual feedback of success.
+ */
+saveRewardsButton.addEventListener("click", () => {
+  const rules = {amount: nrOfTaskInput.value, mins: nrOfMinsInput.value};
+  chrome.storage.sync.set({rewardsRules: rules});
+  chrome.storage.sync.set({rewardsEnabled: rewardsEnabledCheckbox.checked});
+
+  const tmp = saveRewardsButton.textContent;
+  saveRewardsButton.textContent = "Saved successfully!";
+  setTimeout(() => {
+    saveRewardsButton.textContent = tmp;
+  },3000);
+})
+
+/**
+ * Event listener for clearing prev sites button.
+ * Clears the previously added sites and gives user visual feedback of success.
+ */
+clearPrevSiteButton.addEventListener("click", () => {
+  const successMsg = prevSites.length == 0 ? "Nothing to clear!" : "Cleared successfully!";
   prevSites = [];
 
-  saveSites();
-  render();
+  saveLists();
+  renderAll();
 
-  const tmp = clearPreviousButton.textContent;
-  clearPreviousButton.textContent = successMsg;
+  const tmp = clearPrevSiteButton.textContent;
+  clearPrevSiteButton.textContent = successMsg;
   setTimeout(() => {
-    clearPreviousButton.textContent = tmp;
+    clearPrevSiteButton.textContent = tmp;
+  }, 3000);
+});
+
+/**
+ * Event listener for clearing prev sites button.
+ * Clears the previously added sites and gives user visual feedback of success.
+ */
+clearPrevTaskButton.addEventListener("click", () => {
+  const successMsg = prevTasks.length == 0 ? "Nothing to clear!" : "Cleared successfully!";
+  prevTasks = [];
+
+  saveLists();
+  renderAll();
+
+  const tmp = clearPrevTaskButton.textContent;
+  clearPrevTaskButton.textContent = successMsg;
+  setTimeout(() => {
+    clearPrevTaskButton.textContent = tmp;
   }, 3000);
 });
 
