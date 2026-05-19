@@ -1,4 +1,4 @@
-# Ferrum
+# CalmFLow
 
 ## Table of Contents
 - [Installation Guide](#installation-guide)
