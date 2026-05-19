@@ -103,6 +103,10 @@ function renderAll() {
   renderPreviousTasks();
 }
 
+/**
+ * Renders the current blocked sites list, 
+ * including the normalized web url, a remove button and the favicon of each web url, if possible.
+ */
 function renderCurrentSites() {
   currentSiteList.innerHTML = "";
 
@@ -145,6 +149,10 @@ function renderCurrentSites() {
   });
 }
 
+/**
+ * Renders the previous blocked sites list, 
+ * including the normalized web url, a remove button and the favicon of each web url, if possible.
+ */
 function renderPreviousSites() {
   prevSiteList.innerHTML = "";
 
@@ -187,6 +195,9 @@ function renderPreviousSites() {
   })
 }
 
+/**
+ * Renders the current tasks list, including a checkbox and the task text.
+ */
 function renderCurrentTasks() {
   currentTaskList.innerHTML = "";
 
@@ -226,6 +237,9 @@ function renderCurrentTasks() {
   })
 }
 
+/**
+ * Renders the previous/completed task list, including a checked checkbox and the crossed out task text.
+ */
 function renderPreviousTasks() {
   prevTaskList.innerHTML = "";
 
