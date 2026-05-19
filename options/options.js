@@ -25,12 +25,13 @@ const prevSiteList = document.getElementById("prevSiteList");
 const currentTaskList = document.getElementById("currentTaskList");
 const prevTaskList = document.getElementById("prevTaskList");
 
-// init empty list sets
+// init empty list sets & break rules
 let currentSites = [];
 let prevSites = [];
 let currentTasks = [];
 let prevTasks = [];
-
+let breakBalance = 0;
+let taskCounter = 0;
 
 /**
  * Simplifies the website url given by the user.
@@ -60,9 +61,36 @@ function normalizeSite(value) {
 }
 
 /**
- * Loads the list of current & previous blocked sites and current & previous tasks.
+ * Configures the added breakBalance when a task is being marked done, if necessary and syncs the task counter.
  */
-function loadLists() {
+function taskDone() {
+  taskCounter++;
+
+  if (taskCounter < nrOfTaskInput.value)
+    return;
+
+  taskCounter = 0;
+  breakBalance += nrOfMinsInput.value * 60 * 1000;
+}
+
+/**
+ * Configures the subtracted breakBalance when a task is being marked undone, if necessary and syncs the task counter.
+ */
+function taskUnDone() {
+  taskCounter--;
+
+  if (taskCounter >= 0)
+    return;
+
+  taskCounter = 0;
+  breakBalance = Math.min(0,breakBalance-(nrOfMinsInput.value * 60 * 1000));
+}
+
+/**
+ * Loads the list of current & previous blocked sites and current & previous tasks from storage
+ * Additonally loads the break rules from storage.
+ */
+function loadListsAndBreakRules() {
   chrome.storage.sync.get(["currentSites"], (result) => {
     currentSites = result.currentSites || [];
     renderAll();
@@ -79,16 +107,25 @@ function loadLists() {
     prevTasks = result.prevTasks || [];
     renderAll();
   });
+  chrome.storage.sync.get(["breakBalance"], (result) => {
+    breakBalance = result.breakBalance || 0;
+  });
+  chrome.storage.sync.get(["taskCounter"], (result) => {
+    taskcounter = result.taskCounter || 0;
+  });
 }
 
 /**
  * Saves blocked current & previous blocked sites and current & previous tasks to storage.
+ * Additonally saves the break rules to storage.
  */
-function saveLists() {
+function saveListsAndBreakRules() {
   chrome.storage.sync.set({ currentSites: currentSites });
   chrome.storage.sync.set({ prevSites: prevSites });
   chrome.storage.sync.set({ currentTasks: currentTasks });
   chrome.storage.sync.set({ prevTasks: prevTasks });
+  chrome.storage.sync.set({breakBalance: breakBalance});
+  chrome.storage.sync.set({taskCounter: taskCounter});
 }
 
 /**
@@ -139,7 +176,7 @@ function renderCurrentSites() {
       if (removedSite && !prevSites.includes(removedSite)) prevSites.push(removedSite);
 
       currentSites.splice(index, 1);
-      saveLists();
+      saveListsAndBreakRules();
       renderAll();
     };
 
@@ -185,7 +222,7 @@ function renderPreviousSites() {
       if (restoredSite && !currentSites.includes(restoredSite)) currentSites.push(restoredSite);
 
       prevSites.splice(index, 1);
-      saveLists();
+      saveListsAndBreakRules();
       renderAll();
     }
 
@@ -227,8 +264,8 @@ function renderCurrentTasks() {
       }
 
       currentTasks.splice(index, 1);
-
-      saveLists();
+      taskDone();
+      saveListsAndBreakRules();
       renderAll();
     });
 
@@ -273,8 +310,8 @@ function renderPreviousTasks() {
       }
 
       prevTasks.splice(index, 1);
-
-      saveLists();
+      taskUnDone();
+      saveListsAndBreakRules();
       renderAll();
     });
 
@@ -299,7 +336,7 @@ addSiteButton.addEventListener("click", () => {
   if (!currentSites.includes(normalized)) {
     currentSites.push(normalized);
     siteInput.value = "";
-    saveLists();
+    saveListsAndBreakRules();
     renderAll();
   }
 });
@@ -321,7 +358,7 @@ addTaskButton.addEventListener("click", () => {
   if (!currentTasks.includes(value)) {
     currentTasks.push(value);
     taskInput.value = "";
-    saveLists();
+    saveListsAndBreakRules();
     renderAll();
   }
 })
@@ -334,7 +371,7 @@ taskInput.addEventListener("keypress", (e) => {
 })
 
 // Init
-loadLists();
+loadListsAndBreakRules();
 
 /**
  * Event listener for the weekend schedule checkbox.
@@ -417,7 +454,7 @@ clearPrevSiteButton.addEventListener("click", () => {
   const successMsg = prevSites.length == 0 ? "Nothing to clear!" : "Cleared successfully!";
   prevSites = [];
 
-  saveLists();
+  saveListsAndBreakRules();
   renderAll();
 
   const tmp = clearPrevSiteButton.textContent;
@@ -435,7 +472,7 @@ clearPrevTaskButton.addEventListener("click", () => {
   const successMsg = prevTasks.length == 0 ? "Nothing to clear!" : "Cleared successfully!";
   prevTasks = [];
 
-  saveLists();
+  saveListsAndBreakRules();
   renderAll();
 
   const tmp = clearPrevTaskButton.textContent;

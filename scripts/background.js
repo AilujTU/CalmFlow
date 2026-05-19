@@ -1,55 +1,45 @@
 
-/**
- * Returns the blocked web sites from storage 
- * and performs the specified callback function.
- * @param callback function that is used on stored blocked sites
- */
-
-function getCurrentBlockedSites(callback) {
-  chrome.storage.sync.get(["currentBlockedSites"], (result) => {
-    callback(result.currentBlockedSites || []);
-  });
+async function getCurrentSites() {
+  const result = await chrome.storage.sync.get(["currentSites"]);
+  return result.currentSites || [];
 }
 
-
-/**
- * Simply return all styling elements for the blocked screen shown 
- * if blocked website is accessed within schedule.
- * @returns focus overlay style css
- */
-function getFocusOverlayStyle() {
-  return `
-        #focus-block-overlay {
-          position: fixed;
-          top:0; left:0; width:100%; height:100%;
-          background: rgba(240,242,245,0.95);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 999999;
-          backdrop-filter: blur(8px);
-          font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-          animation: fadeInOverlay 0.3s forwards;
-        }
-        .focus-box {
-          background:#fff; padding:36px 28px; border-radius:20px;
-          max-width:400px; width:90%; min-height:180px;
-          box-shadow:0 8px 24px rgba(0,0,0,0.12);
-          display:flex; flex-direction:column;
-          justify-content:center; align-items:center; gap:18px;
-          text-align:center;
-        }
-        .focus-box h1 { margin:0; font-size:22px; font-weight:600; color:#2c3e50; }
-        .focus-box p { margin:0; font-size:15px; color:#4f5b66; }
-        #focus-close-btn { padding:12px 26px; border:none; border-radius:12px;
-          background: linear-gradient(135deg,#6c63ff,#9b8fff); color:#fff; font-size:15px;
-          cursor:pointer; min-width:130px; transition: background 0.3s, transform 0.2s;
-        }
-        #focus-close-btn:hover { background: linear-gradient(135deg,#5a52e6,#8678ff); transform:translateY(-2px); }
-        @keyframes fadeInOverlay { from{opacity:0;} to{opacity:1;} }
-      `;
+async function getBreakBalance() {
+  const result = await chrome.storage.sync.get(["breakBalance"]);
+  return result.breakBalanceMs || 0;
 }
 
+async function setBreakBalance(value) {
+  await chrome.storage.sync.set({breakBalanceMs: value});
+}
+
+async function getBreakUntil() {
+  const result = await chrome.storage.sync.get(["breakUntil"]);
+  return result.breakUntil || 0;
+}
+
+async function setBreakUntil(value) {
+  await chrome.storage.sync.set({onBreak: value});
+}
+
+async function startBreak() {
+  const balance = await getBreakBalance();
+  
+  if (balance <= 0)
+    return;
+
+  const breakUntil = Date.now() + balance;
+
+  await setBreakUntil(breakUntil);
+
+  await setBreakBalance(0);
+}
+
+async function isOnBreak() {
+  const breakUntil = await getBreakUntil();
+
+  return Date.now() < breakUntil;
+}
 
 /**
  * Checks if current time is within the blocked schedule.
@@ -109,11 +99,14 @@ function injectOverlay(tabId) {
       const overlay = document.createElement("div");
       overlay.id = "focus-block-overlay";
 
+      const remainingBreakTimeInMin = Math.floor(await getBreakBalance() / 60000);
+
       overlay.innerHTML = `
         <div class="focus-box">
           <h1>Nope, not right now.</h1>
+          <button id="focus-reward-btn">Take a ${remainingBreakTimeInMin} break?</button>
           <p>This site is blocked to help you stay productive.</p>
-          <button id="focus-close-btn">Okay.</button>
+          <button id="focus-close-btn">Okay.</button>          
         </div>
       `;
 
@@ -150,7 +143,7 @@ function injectOverlay(tabId) {
           font-size:15px; 
           color:#4f5b66; 
         }
-        #focus-close-btn { 
+        #focus-close-btn{ 
           display: flex;
           align-items: center;
           justify-content: center;
@@ -164,8 +157,26 @@ function injectOverlay(tabId) {
           min-width:130px; 
           transition: background 0.3s, transform 0.2s;
         }
-        #focus-close-btn:hover { 
+        #focus-close-btn:hover{ 
           background: linear-gradient(135deg, #BDA6CE, #9B8EC7); 
+          transform:translateY(-2px); 
+        }
+        #focus-reward-btn{
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding:12px 26px; 
+          border:none; 
+          border-radius:12px;
+          background: linear-gradient(135deg, #BDA6CE, #B4D3D9); 
+          color:#fff; 
+          font-size:15px;
+          cursor:pointer; 
+          min-width:130px; 
+          transition: background 0.3s, transform 0.2s;
+        }
+        #focus-reward-btn:hover{ 
+          background: linear-gradient(135deg, #9B8EC7, #BDA6CE); 
           transform:translateY(-2px); 
         }
         @keyframes fadeInOverlay { 
@@ -180,27 +191,34 @@ function injectOverlay(tabId) {
       document.getElementById("focus-close-btn").onclick = () => {
         chrome.runtime.sendMessage({ action: "closeTab" });
       };
+
+      document.getElementById("focus-reward-btn").onclick = () => {
+        chrome.runtime.sendMessage({action: "startBreak"});
+      };
     }
   });
 }
 
 /**
- * Checks on change in tab, if a blocked website is currently visited.
+ * Checks on change in tab, first if on break, if not it checks if a blocked website is currently visited.
  * If so, it further checks if it's within the blocked schedule and blocks accordingly.
  */
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status !== "complete" || !tab.url) return;
 
-  getCurrentBlockedSites((currentBlockedSites) => {
-    const url = new URL(tab.url);
-    if (!currentBlockedSites.some(site => url.hostname.includes(site))) return;
+  if (await isOnBreak()) return;
 
-    isWithinSchedule((shouldBlock) => {
-      if (!shouldBlock) return;
+  const currentSites = await getCurrentSites();
 
-      isNotEnabledAndWeekend((notEnabledAndWeekend) => {
-        if (!notEnabledAndWeekend) injectOverlay(tabId);
-      });
+  const url = new URL(tab.url);
+
+  if (!currentSites.some(site => url.hostname.includes(site))) return;
+
+  isWithinSchedule((shouldBlock) => {
+    if (!shouldBlock) return;
+    isNotEnabledAndWeekend((notEnabledAndWeekend) => {
+      if (!notEnabledAndWeekend)
+        injectOverlay(tabId);
     });
   });
 });
@@ -212,5 +230,12 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 chrome.runtime.onMessage.addListener((message, sender) => {
   if (message.action === "closeTab" && sender.tab?.id) {
     chrome.tabs.remove(sender.tab.id);
+  }
+});
+
+chrome.runtime.onMessage.addListener(async (message,sender) => {
+  if (message.action === "startBreak" && sender.tab?.id) {
+    await startBreak();
+    chrome.tabs.reload(sender.tab.id);
   }
 });
