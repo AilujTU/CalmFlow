@@ -65,17 +65,20 @@ function normalizeSite(value) {
 function loadLists() {
   chrome.storage.sync.get(["currentSites"], (result) => {
     currentSites = result.currentSites || [];
+    renderAll();
   });
   chrome.storage.sync.get(["prevSites"], (result) => {
     prevSites = result.prevSites || [];
+    renderAll();
   });
   chrome.storage.sync.get(["currentTasks"], (result) => {
     currentTasks = result.currentTasks || [];
-  })
+    renderAll();
+  });
   chrome.storage.sync.get(["prevTasks"], (result) => {
     prevTasks = result.prevTasks || [];
-  })
-  renderAll();
+    renderAll();
+  });
 }
 
 /**
@@ -241,6 +244,7 @@ function renderPreviousTasks() {
     const span = document.createElement("span");
     span.textContent = task;
     span.style.textDecoration = "line-through";
+    span.style.opacity = "0.5";
 
     left.appendChild(span);
 
