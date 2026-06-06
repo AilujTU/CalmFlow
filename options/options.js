@@ -2,7 +2,7 @@
 // User Input
 const startInput = document.getElementById("startTime");
 const endInput = document.getElementById("endTime");
-const nrOfMinsInput = document.getElementById("nrOfMinsForReward");
+const minsPerTaskInput = document.getElementById("minsPerTask");
 const siteInput = document.getElementById("siteInput");
 const taskInput = document.getElementById("taskInput");
 
@@ -33,6 +33,7 @@ let prevSites = [];
 let currentTasks = [];
 let prevTasks = [];
 let breakBalance = {count: 0, time:0};
+let minsPerTask = 0;
 
 /**
  * Simplifies the website url given by the user.
@@ -65,13 +66,14 @@ function normalizeSite(value) {
 function loadBreakBalance() {
   chrome.storage.sync.get(["breakBalance"], (result) => {
     breakBalance = result.breakBalance || {count: 0, time: 0};
+    renderBreakTimeText();
   });
 }
 
-loadBreakBalance();
 
-function saveBreakBalance(updatedBalance = breakBalance) {
-  chrome.storage.sync.set({breakBalance: updatedBalance});
+
+function saveBreakBalance() {
+  chrome.storage.sync.set({breakBalance: breakBalance});
 }
 
 
@@ -79,12 +81,10 @@ function saveBreakBalance(updatedBalance = breakBalance) {
  * Updates the breakBalance when a task is being marked done & saves it to storage.
  */
 function taskDone() {
-  updatedBalance = breakBalance;
-  updatedBalance.count = updatedBalance.count +1;
-  updatedBalance.time = breakBalance.time += nrOfMinsInput.value * 60 * 1000;
-  saveBreakBalance(updatedBalance);
+  breakBalance.count+= 1;
+  breakBalance.time+= minsPerTaskInput.value * 60 * 1000;
+  saveBreakBalance();
   loadBreakBalance();
-  renderBreakTimeText();
 }
 
 /**
@@ -92,21 +92,16 @@ function taskDone() {
  * Guarantees breakBalance is non-negative.
  */
 function taskUnDone() {
-  updatedBalance = breakBalance;
-  updatedBalance.count = Math.min(0,updatedBalance.count - 1);
-  updatedBalance.time = Math.min(0, breakBalance.time - (nrOfMinsInput.value*60*1000));
-  saveBreakBalance(updatedBalance);
+  breakBalance.count = Math.max(0,breakBalance.count - 1);
+  breakBalance.time = Math.max(0, breakBalance.time - (minsPerTask*60*1000));
+  saveBreakBalance();
   loadBreakBalance();
-  renderBreakTimeText();
 }
 
 function renderBreakTimeText() {
-  loadBreakBalance();
   const mins = Math.floor(breakBalance.time/(60*1000));
-  const text = `<b> Currently accumulated break time:</b> <b>${mins}</b> min(s)`;
-  breakTimeText.innerHTML = text;
+  breakTimeText.innerHTML = `<b> Currently accumulated break time:</b> <b>${mins}</b> min(s)`;
 }
-renderBreakTimeText();
 
 /**
  * Loads the list of current & previous blocked sites and current & previous tasks from storage.
@@ -416,11 +411,15 @@ function loadSchedule() {
   chrome.storage.sync.get(["weekendsEnabled"], (result) => {
     weekendsEnabledCheckbox.checked = result.weekendsEnabled || false;
   });
+}
+
+function loadRewardsSettings() {
   chrome.storage.sync.get(["rewardsEnabled"], (result) => {
     rewardsEnabledCheckbox.checked = result.rewardsEnabled || false;
   });
-  chrome.storage.sync.get(["nrOfMinsInput"], (result) => {
-    nrOfMinsInput.value = result.nrOfMinsInput || 5;
+  chrome.storage.sync.get(["minsPerTask"], (result) => {
+    minsPerTask = Number(result.minsPerTask) || 5;
+    minsPerTaskInput.value = minsPerTask;
   });
 }
 
@@ -445,14 +444,13 @@ saveScheduleButton.addEventListener("click", () => {
  * Saves selected rewards rules to storage and gives user visual feedback of success.
  */
 saveRewardsButton.addEventListener("click", () => {
-  chrome.storage.sync.set({nrOfMinsInput: nrOfMinsInput.value});
-  console.log(`nr of mins: ${nrOfMinsInput} and value: ${nrOfMinsInput.value?? -1} `);
-  const updatedBalance = {count: breakBalance.count, time: (breakBalance.count*nrOfMinsInput.value*60*1000)};
-  console.log(`updated balance count: ${updatedBalance.count} and time: ${updatedBalance.time}`);
-  saveBreakBalance(updatedBalance);
-  chrome.storage.sync.set({rewardsEnabled: rewardsEnabledCheckbox.checked});
+  minsPerTask = Number(minsPerTaskInput.value) || 5;
+  chrome.storage.sync.set({minsPerTask:minsPerTask});
+  chrome.storage.sync.set({rewardsEnabled:rewardsEnabled.checked});
 
-  renderBreakTimeText();
+  breakBalance.time = breakBalance.count * minsPerTask * 60 * 1000;
+  saveBreakBalance();
+  loadBreakBalance();
 
   const tmp = saveRewardsButton.textContent;
   saveRewardsButton.textContent = "Saved successfully!";
@@ -497,5 +495,7 @@ clearPrevTaskButton.addEventListener("click", () => {
   }, 3000);
 });
 
-// Initialize schedule
+// Initialize schedule, rewards setting, break balance and time
 loadSchedule();
+loadRewardsSettings();
+loadBreakBalance();
