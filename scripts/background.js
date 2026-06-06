@@ -162,30 +162,20 @@ function injectOverlay(tabId) {
  * If so, it further checks if it's within the blocked schedule and blocks accordingly.
  */
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  console.log('wtf is going on');
   if (changeInfo.status !== "complete" || !tab.url) return;
 
   getCurrentSites((currentSites) => {
-    console.log('getCurrentSite reached!');
 
     const url = new URL(tab.url);
 
-    console.log(`Logged URL: ${url}`);
-    console.log(`CurrentSites: ${currentSites}`);
-
     if (!currentSites.some(site => url.hostname.includes(site))) return;
 
-    console.log(`Not returned, current blocked sites list: ${currentSites}`);
 
     isWithinSchedule((shouldBlock) => {
-      console.log(`ShouldBlock: ${shouldBlock}`);
       if (!shouldBlock) return;
       isNotEnabledAndWeekend((notEnabledAndWeekend) => {
-        console.log(`NotEnabledAndWeekend: ${notEnabledAndWeekend}`);
         if (!notEnabledAndWeekend)
-          console.log('Before injecting overlay');
           injectOverlay(tabId);
-          console.log('after injecting overlay');
       });
     });
   });
