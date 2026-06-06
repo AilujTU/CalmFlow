@@ -1,44 +1,8 @@
 
-async function getCurrentSites() {
-  const result = await chrome.storage.sync.get(["currentSites"]);
-  return result.currentSites || [];
-}
-
-async function getBreakBalance() {
-  const result = await chrome.storage.sync.get(["breakBalance"]);
-  return result.breakBalanceMs || 0;
-}
-
-async function setBreakBalance(value) {
-  await chrome.storage.sync.set({breakBalanceMs: value});
-}
-
-async function getBreakUntil() {
-  const result = await chrome.storage.sync.get(["breakUntil"]);
-  return result.breakUntil || 0;
-}
-
-async function setBreakUntil(value) {
-  await chrome.storage.sync.set({onBreak: value});
-}
-
-async function startBreak() {
-  const balance = await getBreakBalance();
-  
-  if (balance <= 0)
-    return;
-
-  const breakUntil = Date.now() + balance;
-
-  await setBreakUntil(breakUntil);
-
-  await setBreakBalance(0);
-}
-
-async function isOnBreak() {
-  const breakUntil = await getBreakUntil();
-
-  return Date.now() < breakUntil;
+function getCurrentSites(callback) {
+  chrome.storage.sync.get(["currentSites"], (result) => {
+    callback(result.currentSites || []);
+  });
 }
 
 /**
@@ -99,12 +63,9 @@ function injectOverlay(tabId) {
       const overlay = document.createElement("div");
       overlay.id = "focus-block-overlay";
 
-      const remainingBreakTimeInMin = Math.floor(await getBreakBalance() / 60000);
-
       overlay.innerHTML = `
         <div class="focus-box">
           <h1>Nope, not right now.</h1>
-          <button id="focus-reward-btn">Take a ${remainingBreakTimeInMin} break?</button>
           <p>This site is blocked to help you stay productive.</p>
           <button id="focus-close-btn">Okay.</button>          
         </div>
@@ -192,9 +153,6 @@ function injectOverlay(tabId) {
         chrome.runtime.sendMessage({ action: "closeTab" });
       };
 
-      document.getElementById("focus-reward-btn").onclick = () => {
-        chrome.runtime.sendMessage({action: "startBreak"});
-      };
     }
   });
 }
@@ -204,23 +162,34 @@ function injectOverlay(tabId) {
  * If so, it further checks if it's within the blocked schedule and blocks accordingly.
  */
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  console.log('wtf is going on');
   if (changeInfo.status !== "complete" || !tab.url) return;
 
-  if (await isOnBreak()) return;
+  getCurrentSites((currentSites) => {
+    console.log('getCurrentSite reached!');
 
-  const currentSites = await getCurrentSites();
+    const url = new URL(tab.url);
 
-  const url = new URL(tab.url);
+    console.log(`Logged URL: ${url}`);
+    console.log(`CurrentSites: ${currentSites}`);
 
-  if (!currentSites.some(site => url.hostname.includes(site))) return;
+    if (!currentSites.some(site => url.hostname.includes(site))) return;
 
-  isWithinSchedule((shouldBlock) => {
-    if (!shouldBlock) return;
-    isNotEnabledAndWeekend((notEnabledAndWeekend) => {
-      if (!notEnabledAndWeekend)
-        injectOverlay(tabId);
+    console.log(`Not returned, current blocked sites list: ${currentSites}`);
+
+    isWithinSchedule((shouldBlock) => {
+      console.log(`ShouldBlock: ${shouldBlock}`);
+      if (!shouldBlock) return;
+      isNotEnabledAndWeekend((notEnabledAndWeekend) => {
+        console.log(`NotEnabledAndWeekend: ${notEnabledAndWeekend}`);
+        if (!notEnabledAndWeekend)
+          console.log('Before injecting overlay');
+          injectOverlay(tabId);
+          console.log('after injecting overlay');
+      });
     });
   });
+
 });
 
 
@@ -230,12 +199,5 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 chrome.runtime.onMessage.addListener((message, sender) => {
   if (message.action === "closeTab" && sender.tab?.id) {
     chrome.tabs.remove(sender.tab.id);
-  }
-});
-
-chrome.runtime.onMessage.addListener(async (message,sender) => {
-  if (message.action === "startBreak" && sender.tab?.id) {
-    await startBreak();
-    chrome.tabs.reload(sender.tab.id);
   }
 });

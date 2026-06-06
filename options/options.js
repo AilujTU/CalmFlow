@@ -2,7 +2,6 @@
 // User Input
 const startInput = document.getElementById("startTime");
 const endInput = document.getElementById("endTime");
-const nrOfTaskInput = document.getElementById("nrOfTaskForReward");
 const nrOfMinsInput = document.getElementById("nrOfMinsForReward");
 const siteInput = document.getElementById("siteInput");
 const taskInput = document.getElementById("taskInput");
@@ -31,7 +30,6 @@ let prevSites = [];
 let currentTasks = [];
 let prevTasks = [];
 let breakBalance = 0;
-let taskCounter = 0;
 
 /**
  * Simplifies the website url given by the user.
@@ -64,12 +62,7 @@ function normalizeSite(value) {
  * Configures the added breakBalance when a task is being marked done, if necessary and syncs the task counter.
  */
 function taskDone() {
-  taskCounter++;
 
-  if (taskCounter < nrOfTaskInput.value)
-    return;
-
-  taskCounter = 0;
   breakBalance += nrOfMinsInput.value * 60 * 1000;
 }
 
@@ -77,20 +70,13 @@ function taskDone() {
  * Configures the subtracted breakBalance when a task is being marked undone, if necessary and syncs the task counter.
  */
 function taskUnDone() {
-  taskCounter--;
-
-  if (taskCounter >= 0)
-    return;
-
-  taskCounter = 0;
   breakBalance = Math.min(0,breakBalance-(nrOfMinsInput.value * 60 * 1000));
 }
 
 /**
- * Loads the list of current & previous blocked sites and current & previous tasks from storage
- * Additonally loads the break rules from storage.
+ * Loads the list of current & previous blocked sites and current & previous tasks from storage.
  */
-function loadListsAndBreakRules() {
+function loadLists() {
   chrome.storage.sync.get(["currentSites"], (result) => {
     currentSites = result.currentSites || [];
     renderAll();
@@ -107,25 +93,16 @@ function loadListsAndBreakRules() {
     prevTasks = result.prevTasks || [];
     renderAll();
   });
-  chrome.storage.sync.get(["breakBalance"], (result) => {
-    breakBalance = result.breakBalance || 0;
-  });
-  chrome.storage.sync.get(["taskCounter"], (result) => {
-    taskcounter = result.taskCounter || 0;
-  });
 }
 
 /**
  * Saves blocked current & previous blocked sites and current & previous tasks to storage.
- * Additonally saves the break rules to storage.
  */
-function saveListsAndBreakRules() {
+function saveLists() {
   chrome.storage.sync.set({ currentSites: currentSites });
   chrome.storage.sync.set({ prevSites: prevSites });
   chrome.storage.sync.set({ currentTasks: currentTasks });
   chrome.storage.sync.set({ prevTasks: prevTasks });
-  chrome.storage.sync.set({breakBalance: breakBalance});
-  chrome.storage.sync.set({taskCounter: taskCounter});
 }
 
 /**
@@ -176,7 +153,7 @@ function renderCurrentSites() {
       if (removedSite && !prevSites.includes(removedSite)) prevSites.push(removedSite);
 
       currentSites.splice(index, 1);
-      saveListsAndBreakRules();
+      saveLists();
       renderAll();
     };
 
@@ -222,7 +199,7 @@ function renderPreviousSites() {
       if (restoredSite && !currentSites.includes(restoredSite)) currentSites.push(restoredSite);
 
       prevSites.splice(index, 1);
-      saveListsAndBreakRules();
+      saveLists();
       renderAll();
     }
 
@@ -265,7 +242,7 @@ function renderCurrentTasks() {
 
       currentTasks.splice(index, 1);
       taskDone();
-      saveListsAndBreakRules();
+      saveLists();
       renderAll();
     });
 
@@ -311,7 +288,7 @@ function renderPreviousTasks() {
 
       prevTasks.splice(index, 1);
       taskUnDone();
-      saveListsAndBreakRules();
+      saveLists();
       renderAll();
     });
 
@@ -336,7 +313,7 @@ addSiteButton.addEventListener("click", () => {
   if (!currentSites.includes(normalized)) {
     currentSites.push(normalized);
     siteInput.value = "";
-    saveListsAndBreakRules();
+    saveLists();
     renderAll();
   }
 });
@@ -358,7 +335,7 @@ addTaskButton.addEventListener("click", () => {
   if (!currentTasks.includes(value)) {
     currentTasks.push(value);
     taskInput.value = "";
-    saveListsAndBreakRules();
+    saveLists();
     renderAll();
   }
 })
@@ -371,7 +348,7 @@ taskInput.addEventListener("keypress", (e) => {
 })
 
 // Init
-loadListsAndBreakRules();
+loadLists();
 
 /**
  * Event listener for the weekend schedule checkbox.
@@ -392,7 +369,7 @@ rewardsEnabledCheckbox.addEventListener("change", () => {
 /**
  * Loads the schedule for when websites should be blocked from storage,
  * including decision of whether weekends are included.
- * Also loads whether rewards are enabled or not, and if how many and how much time each give.
+ * Also loads whether rewards are enabled or not, and if how much time each give.
  * Defaults to start 9am and end 5pm.
  */
 function loadSchedule() {
@@ -407,10 +384,11 @@ function loadSchedule() {
   chrome.storage.sync.get(["rewardsEnabled"], (result) => {
     rewardsEnabledCheckbox.checked = result.rewardsEnabled || false;
   });
-  chrome.storage.sync.get(["rewardsRules"], (result) => {
-    const rules = result.rewardsRules || {amount: 1, mins: 5};
-    nrOfTaskInput.value = rules.amount;
-    nrOfMinsInput.value = rules.mins;
+  chrome.storage.sync.get(["nrOfMinsInput"], (result) => {
+    nrOfMinsInput.value = result.nrOfMinsInput || 5;
+  });
+  chrome.storage.sync.get(["breakBalance"], (result) => {
+    breakBalance = result.breakBalance || 0;
   });
 }
 
@@ -435,8 +413,7 @@ saveScheduleButton.addEventListener("click", () => {
  * Saves selected rewards rules to storage and gives user visual feedback of success.
  */
 saveRewardsButton.addEventListener("click", () => {
-  const rules = {amount: nrOfTaskInput.value, mins: nrOfMinsInput.value};
-  chrome.storage.sync.set({rewardsRules: rules});
+  chrome.storage.sync.set({nrOfMinsInput: nrOfMinsInput.value});
   chrome.storage.sync.set({rewardsEnabled: rewardsEnabledCheckbox.checked});
 
   const tmp = saveRewardsButton.textContent;
@@ -454,7 +431,7 @@ clearPrevSiteButton.addEventListener("click", () => {
   const successMsg = prevSites.length == 0 ? "Nothing to clear!" : "Cleared successfully!";
   prevSites = [];
 
-  saveListsAndBreakRules();
+  saveLists();
   renderAll();
 
   const tmp = clearPrevSiteButton.textContent;
@@ -472,7 +449,7 @@ clearPrevTaskButton.addEventListener("click", () => {
   const successMsg = prevTasks.length == 0 ? "Nothing to clear!" : "Cleared successfully!";
   prevTasks = [];
 
-  saveListsAndBreakRules();
+  saveLists();
   renderAll();
 
   const tmp = clearPrevTaskButton.textContent;
